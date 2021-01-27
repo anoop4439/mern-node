@@ -1,24 +1,10 @@
-const uuid = require('uuid').v4;
-
+const mongoose = require('mongoose');
 const { validationResult } = require('express-validator');
 
 const HttpError = require('../models/http-error');
 const getCoordsForAddress = require('../util/location');
 const Place = require('../models/place');
-
-let DUMMY_PLACES = [
-    {
-        id: 'p1',
-        title: 'Kollam',
-        description: 'Most beautiful place in the world',
-        location: {
-            lat: '76.09988',
-            lng: '78.63633'
-        },
-        address: 'Something, somthing P.O.',
-        creator: 'u1'
-    }
-];
+const User = require('../models/user');
 
 const getPlaceById = async (req, res, next) => {
     const placeId = req.params.pid;
@@ -78,8 +64,26 @@ const createPlace = async (req, res, next) => {
         creator
     });
 
+    let user;
     try {
-        await createdPlace.save();
+        user = await User.findById(creator);
+    } catch(err) {
+        const error = new HttpError('Cannot create place, please try again', 500);
+        return next(error);
+    }
+
+    if(!user) {
+        const error = new HttpError('Could not find the user', 404);
+        return next(error);
+    }
+
+    try {
+        const sess = await mongoose.startSession();
+        sess.startTransaction();
+        await createdPlace.save({ session: sess });
+        user.places.push(createdPlace);
+        await user.save({ session: sess });
+        await sess.commitTransaction();
     } catch(err) {
         const error = new HttpError('Creating place failed, please try again', 500);
         return next(error);
@@ -124,14 +128,24 @@ const deletePlace = async (req, res, next) => {
 
     let place;
     try {
-        place = await Place.findById(placeId);
+        place = await Place.findById(placeId).populate('creator');
     } catch (err) {
         const error = new HttpError('Something went wrong, delete failed.', 500);
         return next(error);
     }
 
+    if(!place) {
+        const error = new HttpError('Could not find a place for the id provided', 404);
+        return next(error);
+    }
+
     try {
-        await place.remove();
+        const sess = await mongoose.startSession();
+        sess.startTransaction();
+        await place.remove({ session: sess });
+        place.creator.places.pull(place);
+        await place.creator.save({ session: sess });
+        await sess.commitTransaction();
     } catch (err) {
         const error = new HttpError('Something went wrong, delete failed.', 500);
         return next(error);
