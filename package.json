@@ -5,17 +5,20 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon app.js"
+    "start": "node app.js"
   },
   "author": "Anoop S Mohan",
   "license": "ISC",
   "dependencies": {
     "axios": "^0.21.0",
+    "bcryptjs": "^2.4.3",
     "body-parser": "^1.19.0",
     "express": "^4.17.1",
     "express-validator": "^6.7.0",
+    "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.11.9",
     "mongoose-unique-validator": "^2.0.3",
+    "multer": "^1.4.2",
     "uuid": "^8.3.1"
   },
   "devDependencies": {
