@@ -1,8 +1,8 @@
 {
     "env": {
-        "DB_USER": "anoop_36",
-        "DB_PASSWORD": "anoop36",
-        "DB_NAME": "mern",
-        "JWT_KEY": "mern_secret_no_share"
+        "DB_USER": "",
+        "DB_PASSWORD": "",
+        "DB_NAME": "",
+        "JWT_KEY": ""
     }
 }
