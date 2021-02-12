@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { validationResult } = require('express-validator');
+const fs = require('fs');
 
 const HttpError = require('../models/http-error');
 const getCoordsForAddress = require('../util/location');
@@ -46,7 +47,7 @@ const createPlace = async (req, res, next) => {
         return next(new HttpError('Invalid inputs passed, please check your data.', 422));
     }
 
-    const { title, description, address, creator } = req.body;
+    const { title, description, address } = req.body;
 
     let coordinates;
     try {
@@ -58,15 +59,15 @@ const createPlace = async (req, res, next) => {
     const createdPlace = new Place({
         title,
         description,
-        image: 'https://townplanning.kerala.gov.in/town/wp-content/uploads/2018/12/kollam-2.jpg',
+        image: req.file.path,
         address,
         location: coordinates,
-        creator
+        creator: req.userData.userId
     });
 
     let user;
     try {
-        user = await User.findById(creator);
+        user = await User.findById(req.userData.userId);
     } catch(err) {
         const error = new HttpError('Cannot create place, please try again', 500);
         return next(error);
@@ -110,6 +111,11 @@ const updatePlace = async (req, res, next) => {
         return next(error);
     }
 
+    if (place.creator.toString() !== req.userData.userId) {
+        const error = new HttpError('You are not allowed to edit this place.', 401);
+        return next(error);
+    }
+
     place.title = title;
     place.description = description;
 
@@ -139,6 +145,13 @@ const deletePlace = async (req, res, next) => {
         return next(error);
     }
 
+    if (place.creator.id !== req.userData.userId) {
+        const error = new HttpError('You are not allowed to edit this place.', 401);
+        return next(error);
+    }
+
+    const imagePath = place.image;
+
     try {
         const sess = await mongoose.startSession();
         sess.startTransaction();
@@ -150,6 +163,10 @@ const deletePlace = async (req, res, next) => {
         const error = new HttpError('Something went wrong, delete failed.', 500);
         return next(error);
     }
+
+    fs.unlink(imagePath, (err) => {
+        console.log(err);
+    })
 
     res.status(200).json({message: 'Place deleted.'});
 };
